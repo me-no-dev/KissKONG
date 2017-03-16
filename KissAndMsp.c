@@ -121,17 +121,17 @@ typedef enum {
     MSP_START, MSP_M, MSP_ERR, MSP_LEN, MSP_CMD, MSP_DATA, MSP_CS, MSP_DONE
 } msp_rx_state_t;
 
-static volatile msp_rx_state_t _msp_rx_state = MSP_START;
-static volatile msp_callback_t * _msp_rx_cb = NULL;
-static volatile uint8_t * _msp_rx_buf = NULL;
+static  msp_rx_state_t _msp_rx_state = MSP_START;
+static  msp_callback_t * _msp_rx_cb = NULL;
+static  uint8_t * _msp_rx_buf = NULL;
 
-static volatile bool _msp_rx_err = false;
-static volatile uint8_t _msp_rx_cmd = 0;
-static volatile uint8_t _msp_rx_len = 0;
-static volatile uint8_t _msp_rx_index = 0;
-static volatile uint8_t _msp_rx_checksum = 0;
-static volatile uint32_t _msp_rx_started_at = 0;
-static volatile msp_direction_t _msp_rx_direction = APP_TO_DEVICE;
+static bool _msp_rx_err = false;
+static uint8_t _msp_rx_cmd = 0;
+static uint8_t _msp_rx_len = 0;
+static uint8_t _msp_rx_index = 0;
+static uint8_t _msp_rx_checksum = 0;
+static uint32_t _msp_rx_started_at = 0;
+static msp_direction_t _msp_rx_direction = APP_TO_DEVICE;
 
 /*
  * Forward Declarations
@@ -493,7 +493,7 @@ bool kiss_get_info(char * str, kiss_esc_info_t * info){
         return false;
     }
     memcpy((uint8_t*)info, (uint8_t*)i, full_len);
-    memcpy((uint8_t*)str, _kiss_rx_buffer, len+1);
+    memcpy((uint8_t*)str, (uint8_t*)_kiss_rx_buffer, len+1);
     return true;
 }
 
@@ -528,7 +528,7 @@ static void _msp_update(){
             _msp_rx_cb(_msp_rx_direction, _msp_rx_err, _msp_rx_cmd, (uint8_t *)_msp_rx_buf, _msp_rx_len);
         }
         if(_msp_rx_buf){
-            free(_msp_rx_buf);
+            free((void *)_msp_rx_buf);
             _msp_rx_buf = NULL;
         }
         _msp_rx_state = MSP_START;
@@ -583,7 +583,7 @@ static void _msp_rx_byte(uint8_t data){
                     return;
                 }
             }
-            memset(_msp_rx_buf, 0, MSP_BUFFER_LEN);
+            memset((void *)_msp_rx_buf, 0, MSP_BUFFER_LEN);
         }
         _msp_rx_checksum = 0;
         _msp_rx_len = data;

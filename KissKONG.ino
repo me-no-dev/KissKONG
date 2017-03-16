@@ -24,7 +24,7 @@ MAX7456 osd(10);
 
 void onMSP(msp_direction_t direction, bool err, uint8_t cmd, uint8_t * data, uint8_t len){
     if(cmd == MSP_OSD){
-        if(data[0] == MSP_OSD_FONT && direction == APP_TO_DEVICE){
+        if(data[0] == MSP_OSD_FONT && direction == APP_TO_DEVICE && !err){
             if(len == 56 || len == 64){
                 osd.writeFontChar(data[55], &data[1]);
             }
