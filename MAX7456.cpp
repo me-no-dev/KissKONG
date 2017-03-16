@@ -429,11 +429,12 @@ size_t MAX7456::write(const uint8_t * buf, size_t len){
 void MAX7456::writeFontChar(uint8_t index, const uint8_t * bitmap){
     uint8_t i;
 
-    disable();
-
     _MAX7456_select();
+    _MAX7456_disable();
 
-    _MAX7456_write(MAX7456_CMAH, index);
+    while(_MAX7456_read(MAX7456_CMAH) != index){
+        _MAX7456_write(MAX7456_CMAH, index);
+    }
 
     for(i = 0; i < 54; i++){
         _MAX7456_write(MAX7456_CMAL, i);
@@ -441,11 +442,10 @@ void MAX7456::writeFontChar(uint8_t index, const uint8_t * bitmap){
     }
 
     _MAX7456_write(MAX7456_CMM, MAX7456_NVR_WRITE);
+
     _MAX7456_wait_nvr();
-
+    _MAX7456_enable();
     _MAX7456_deselect();
-
-    enable();
 
 }
 
@@ -453,9 +453,13 @@ void MAX7456::readFontChar(uint8_t index, uint8_t * bitmap){
     uint8_t i;
 
 
-    _MAX7456_disable();
     _MAX7456_select();
-    _MAX7456_write(MAX7456_CMAH, index);
+    _MAX7456_disable();
+
+    while(_MAX7456_read(MAX7456_CMAH) != index){
+        _MAX7456_write(MAX7456_CMAH, index);
+    }
+
     _MAX7456_write(MAX7456_CMM, MAX7456_NVR_READ);
 
     for(i = 0; i < 54; i++){
@@ -465,7 +469,6 @@ void MAX7456::readFontChar(uint8_t index, uint8_t * bitmap){
 
     _MAX7456_wait_nvr();
     _MAX7456_enable();
-
     _MAX7456_deselect();
 }
 
@@ -473,9 +476,12 @@ void MAX7456::replaceFontChar(uint8_t index, const uint8_t * bitmap_in, uint8_t 
     uint8_t i, temp;
 
     _MAX7456_select();
-
     _MAX7456_disable();
-    _MAX7456_write(MAX7456_CMAH, index);
+
+    while(_MAX7456_read(MAX7456_CMAH) != index){
+        _MAX7456_write(MAX7456_CMAH, index);
+    }
+
     _MAX7456_write(MAX7456_CMM, MAX7456_NVR_READ);
 
     for(i = 0; i < 54; i++){
@@ -486,9 +492,9 @@ void MAX7456::replaceFontChar(uint8_t index, const uint8_t * bitmap_in, uint8_t 
     }
 
     _MAX7456_write(MAX7456_CMM, MAX7456_NVR_WRITE);
+
     _MAX7456_wait_nvr();
     _MAX7456_enable();
-
     _MAX7456_deselect();
 }
 
