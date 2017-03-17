@@ -2,6 +2,8 @@
 
 This is a written-from-scratch code to communicate with KISS FC and control MAX7456 to disaply OSD GUI
 
+#### Code is currently compatible with MinimOSD hardware and any ATmega328p with MAX7456 on default SPI pins
+
 Both ```KissAndMsp``` and ```MAX7456``` are stand-alone libs that can be used in other projects.
 
 To be able to use the menu to change settings, ARM MUST be set to be controlled by a switch!
