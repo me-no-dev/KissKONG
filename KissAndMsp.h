@@ -161,6 +161,12 @@ typedef union {
     uint8_t value;
 } kiss_aux_config_t;
 
+typedef struct {
+       uint8_t r;
+       uint8_t g;
+       uint8_t b;
+} kiss_led_color_t;
+
 typedef struct { // len 144
     uint16_t pid_p[3];      // v/1000
     uint16_t pid_i[3];      // v/1000
@@ -202,7 +208,7 @@ typedef struct { // len 144
     uint8_t influence[3];
     uint8_t secret;
     uint8_t logger_config;
-    uint8_t rgb[3];
+    kiss_led_color_t rgb;
     uint16_t vbat_alarm;    // v/10
     int16_t cbo[3];
     kiss_aux_config_t aux_4;

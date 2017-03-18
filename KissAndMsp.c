@@ -71,7 +71,7 @@ typedef struct { // len is 134, but output 142
     uint8_t influence[3];
     uint8_t secret;
     uint8_t logger_config;
-    uint8_t rgb[3];
+    kiss_led_color_t rgb;
     uint16_t vbat_alarm;  // v*10
     int16_t cbo[3];
     kiss_aux_config_t aux_4;
@@ -312,9 +312,9 @@ bool kiss_set_settings(kiss_settings_t * data_in){
     cpByte(influence[2]);
     cpByte(secret);
     cpByte(logger_config);
-    cpByte(rgb[0]);
-    cpByte(rgb[1]);
-    cpByte(rgb[2]);
+    cpByte(rgb.r);
+    cpByte(rgb.g);
+    cpByte(rgb.b);
     cpUint(vbat_alarm);
     cpInt(cbo[0]);
     cpInt(cbo[1]);

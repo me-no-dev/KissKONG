@@ -17,14 +17,36 @@ If setting is not detetcted, only live data and flight statistics will be shown.
 
 ### Menu can be entered ONLY when disarmed
 
-### Example Screens
+## Example Screens
+
+### Main Menu
 
 ![Menu](images/menu.jpg)
 
-![Info](images/info.jpg)
+### Settings
+
+![Settings](images/settings.jpg)
+
+### PIDs
 
 ![PIDs](images/pids.jpg)
 
+### Rates
+
 ![Rates](images/rates.jpg)
+
+### Extra PIDs
+
+![xPIDs](images/xtra.jpg)
+
+### Filters
+
+![Filters](images/flters.jpg)
+
+### Info
+
+![Info](images/info.jpg)
+
+### Flight Statitics
 
 ![Stats](images/stats.jpg)
