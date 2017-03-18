@@ -16,7 +16,7 @@
 #include "KissAndMsp.h"
 #include "MAX7456.h"
 
-MAX7456 osd(10);
+MAX7456 osd(10);// MAX7456 attached to SPI and SS pin 10
 
 /*
  * MSP implementation for Font Upload
@@ -120,6 +120,10 @@ typedef enum {
 typedef enum {
     STICKS_NONE, STICKS_LEFT, STICKS_RIGHT, STICKS_UP, STICKS_DOWN, STICKS_YES, STICKS_NO, STICKS_MENU, STICKS_ERR
 } sticks_value_t;
+
+//
+static int8_t offsetLeft = 18;
+static int8_t offsetTop = 13;
 
 // PIDs and Rates table value positions
 static uint8_t table_current_index = 0;
@@ -227,16 +231,6 @@ void printRate(int16_t value){
     osd.print(value/100.0, 2);
 }
 
-// (5)
-void printFlightMode(bool leftJustified){
-    uint8_t m = telemetry.mode;
-    if(leftJustified){
-        osd.print((m==0)?F("ACRO "):((m==1)?F("ANGLE"):((m==2)?F("3D   "):F("     "))));
-    } else {
-        osd.print((m==0)?F(" ACRO"):((m==1)?F("ANGLE"):((m==2)?F("   3D"):F("     "))));
-    }
-}
-
 //0 -> 99999 (7)
 void printCurent(int32_t value){
     if(value < 10000){
@@ -257,7 +251,7 @@ void printVoltage(int32_t value){
 }
 
 //0 -> 99999 (8) poles is usually 14
-void printRpm(int32_t value, uint8_t poles){
+void printRpm(int32_t value, uint8_t poles, bool printName){
     value = (value*32)/poles;
     if(value < 10000){
         osd.write(' ');
@@ -271,11 +265,14 @@ void printRpm(int32_t value, uint8_t poles){
             }
         }
     }
-    osd.print(value); osd.print("rpm");
+    osd.print(value);
+    if(printName){
+        osd.print("rpm");
+    }
 }
 
 //0 -> 9999 (7)
-void printMah(int32_t value){
+void printMah(int32_t value, bool printName){
     if(value < 1000){
         osd.write(' ');
         if(value < 100){
@@ -285,7 +282,10 @@ void printMah(int32_t value){
             }
         }
     }
-    osd.print(value); osd.print("mAh");
+    osd.print(value);
+    if(printName){
+        osd.print("mAh");
+    }
 }
 
 //0 -> 100 (4)
@@ -310,6 +310,20 @@ void printTemperature(int16_t value){
     osd.print(value); osd.write('C');
 }
 
+//-18000 -> 18000 (7)
+void printAngle(int16_t value){
+    if(value >= 0){
+        osd.write(' ');
+    }
+    if(value > -10000 && value < 10000){
+        osd.write(' ');
+    }
+    if(value > -1000 && value < 1000){
+        osd.write(' ');
+    }
+    osd.print(value/100.0, 1);
+}
+
 //takes ms (5)
 void printDuration(uint32_t duration){
     duration /= 1000;
@@ -326,6 +340,34 @@ void printDuration(uint32_t duration){
     osd.print(seconds);
 }
 
+// (5)
+void printFlightMode(){
+    uint8_t m = telemetry.mode;
+    if(!m){
+        osd.print(F(" ACRO"));
+    } else if(m == 1){
+        osd.print(F("LEVEL"));
+    } else if(m == 2){
+        osd.print(F("   3D"));
+    } else {
+        osd.print(F("     "));
+    }
+}
+
+// (8)
+void printEscType(uint8_t type){
+    if(type == 1){
+        osd.print(F("KISS 8A "));
+    } else if(type == 2){
+        osd.print(F("KISS 16A"));
+    } else if(type == 3){
+        osd.print(F("KISS 24A"));
+    } else {
+        osd.print(F("UNKNOWN"));
+        osd.print(type);
+    }
+}
+
 // (3)
 void printAuxConfig(kiss_aux_config_type_t type){
     kiss_aux_config_t * conf = NULL;
@@ -335,15 +377,98 @@ void printAuxConfig(kiss_aux_config_type_t type){
         conf = &settings.aux[type];
     }
 
-    osd.write(0x30+conf->channel);
-    switch(conf->level){
-        case AUX_LOW:       osd.print(F("LO")); break;
-        case AUX_LOW_MED:   osd.print(F("LM")); break;
-        case AUX_MED:       osd.print(F("ME")); break;
-        case AUX_MED_HIGH:  osd.print(F("MH")); break;
-        case AUX_HIGH:      osd.print(F("HI")); break;
-        default: break;
+    if(conf->level){
+        osd.write(0x30+conf->channel);
+        switch(conf->level){
+            case AUX_LOW:       osd.print(F("LO")); break;
+            case AUX_LOW_MED:   osd.print(F("ML")); break;
+            case AUX_MED:       osd.print(F("ME")); break;
+            case AUX_MED_HIGH:  osd.print(F("MH")); break;
+            case AUX_HIGH:      osd.print(F("HI")); break;
+            default: break;
+        }
+    } else {
+        osd.print(F("OFF"));
     }
+}
+
+// (5)
+void printOutputMode(){
+    switch(settings.oneshot_125){
+        case 0:  osd.print(F("  PWM")); break;
+        case 1:  osd.print(F("OS125")); break;
+        case 2:  osd.print(F(" OS42")); break;
+        case 3:  osd.print(F("DS150")); break;
+        case 4:  osd.print(F("DS300")); break;
+        case 5:  osd.print(F("DS600")); break;
+        default: osd.print(F("ERROR")); break;
+    }
+}
+
+// (4)
+void printRxType(){
+    switch(settings.rx_type){
+        case 0:  osd.print(F("AUTO")); break;
+        case 1:  osd.print(F("46SC")); break;
+        case 2:  osd.print(F("TRPY")); break;
+        case 3:  osd.print(F("PTRY")); break;
+        case 4:  osd.print(F("TPYR")); break;
+        case 5:  osd.print(F("RPYT")); break;
+        case 6:  osd.print(F("DSM2")); break;
+        case 7:  osd.print(F("DMX2")); break;
+        case 8:  osd.print(F("SBUS")); break;
+        case 9:  osd.print(F("SUMD")); break;
+        case 10: osd.print(F("XBUS")); break;
+        case 11: osd.print(F("FBSB")); break;
+        case 12: osd.print(F("PRTY")); break;
+        case 13: osd.print(F("RPTY")); break;
+        case 14: osd.print(F("SRXL")); break;
+        case 15: osd.print(F("SBNI")); break;
+        default: osd.print(F("OTHR")); break;
+    }
+}
+
+// (5)
+void printLpfFreq(){
+    switch(settings.lpf){
+        case 0:  osd.print(F("  OFF")); break;
+        case 1:  osd.print(F("   HI")); break;
+        case 2:  osd.print(F("MEDHI")); break;
+        case 3:  osd.print(F("  MED")); break;
+        case 4:  osd.print(F("MEDLO")); break;
+        case 5:  osd.print(F("   LO")); break;
+        case 6:  osd.print(F("VRYLO")); break;
+        default: osd.print(F("ERROR")); break;
+    }
+}
+
+// (5)
+void printFrameType(){
+    switch(settings.copter_type){
+        case 0:  osd.print(F("  TRI")); break;
+        case 1:  osd.print(F("Quad+")); break;
+        case 2:  osd.print(F("QuadX")); break;
+        case 3:  osd.print(F("   Y4")); break;
+        case 4:  osd.print(F("   Y6")); break;
+        case 5:  osd.print(F("Hexa+")); break;
+        case 6:  osd.print(F("HexaX")); break;
+        default: osd.print(F("ERROR")); break;
+    }
+}
+
+//get max current that KISS ESC supports
+int16_t getEscMaxCurrent(uint8_t index){
+    if(index >= info.count || !info.esc[index].type){
+        return 0;
+    }
+    if(info.esc[index].type == 1){
+        return 800;//8A
+    } else if(info.esc[index].type == 2){
+        return 1600;//16A
+    } else if(info.esc[index].type == 3){
+        return 2400;//24A
+    }
+    return 0;
 }
 
 //Detects if Arm switch is set
@@ -464,30 +589,72 @@ static void updateTableIndex(){
  * */
 
 static void drawInfo(){
-    uint8_t i;
-    osd.setCursor((28 - strlen(name))/2,2);
-    osd.print(name);
-    for(i=0;i<esc_stats.count; i++){
-        osd.setCursor(7,3+i);
-        osd.print(F("ESC"));
-        osd.print(i+1);
-        osd.write(' ');
-        uint8_t type = info.esc[i].type;
-        if(type == 1){
-            osd.print(F("KISS 8A"));
-        } else if(type == 2){
-            osd.print(F("KISS 16A"));
-        } else if(type == 3){
-            osd.print(F("KISS 24A"));
-        } else {
-            osd.print(F("UNKNOWN"));
-            osd.print(type);
-            update_info = true;
+    uint8_t i, line = 1;
+
+    static uint8_t lastEscCount = esc_stats.count;
+    if(esc_stats.count != lastEscCount){
+        lastEscCount = esc_stats.count;
+        for(i=line;i<11;i++){
+            osd.clearLine(i);
         }
     }
+    //FC Version
+    osd.setCursor((28 - (strlen(name)+6))/2,line++);
+    //frame type?
+    printFrameType();
+    osd.write(' ');
+    osd.print(name);
+
+    //Found ESCs
+    for(i=0;i<esc_stats.count; i++){
+        if(i&1){
+            //escs 1, 3 and 5
+            osd.setCursor(14, line++);
+        } else if(i == (esc_stats.count - 1)){
+            //esc 2 on tri-copter
+            osd.setCursor(10, line++);
+        } else {
+            //escs 0, 2 and 4
+            osd.setCursor(5, line);
+        }
+        printEscType(info.esc[i].type);
+    }
+
+    //Output Type, Receiver Type, LPF Frequency
+    osd.setCursor(0, line++);
+    osd.print(F("OUT:")); printOutputMode();
+    osd.print(F(" RX:")); printRxType();
+    osd.print(F(" LPF:")); printLpfFreq();
+
+    //AUX_ARM, AUX_LEVEL, AUX_BUZZER, AUX_LED, AUX_3D
+    osd.setCursor(2, line++);
+    osd.print(F("ARM:")); printAuxConfig(AUX_ARM);
+    osd.print(F(" LED:")); printAuxConfig(AUX_LED);
+    osd.print(F(" 3D:")); printAuxConfig(AUX_3D);
+    osd.setCursor(3, line++);
+    osd.print(F("BUZZER:")); printAuxConfig(AUX_BUZZER);
+    osd.print(F(" LEVEL:")); printAuxConfig(AUX_LEVEL);
+
+    //Angle
+    osd.setCursor(2, line++);
+    osd.print(F("ROLL:")); printAngle(telemetry.angle[0]);
+    osd.print(F(" PITCH:"));  printAngle(telemetry.angle[1]);
+
+    //RX Channels
+    osd.setCursor(0, line++);
+    osd.print(F("T:"));  printMah(telemetry.throttle + 1000, false);
+    osd.print(F(" R:")); printMah((telemetry.roll + 3000) / 2, false);
+    osd.print(F(" P:")); printMah((telemetry.pitch + 3000) / 2, false);
+    osd.print(F(" Y:")); printMah((telemetry.yaw + 3000) / 2, false);
+    osd.setCursor(0, line++);
+    osd.print(F("1:"));  printMah((telemetry.aux[0] + 3000) / 2, false);
+    osd.print(F(" 2:")); printMah((telemetry.aux[1] + 3000) / 2, false);
+    osd.print(F(" 3:")); printMah((telemetry.aux[2] + 3000) / 2, false);
+    osd.print(F(" 4:")); printMah((telemetry.aux[3] + 3000) / 2, false);
 }
 
 static void updateInfo(){
+    drawInfo();
     if(currentSticks == STICKS_NO || currentSticks == STICKS_LEFT){
         setCurrentView(VIEW_MAIN);
     }
@@ -706,8 +873,8 @@ static void drawStats(){
     osd.setCursor(2,5);  osd.print(F("Min Voltage    : ")); printVoltage(flight_stats.min_voltage);
     if(esc_stats.count){
         osd.setCursor(2,6);  osd.print(F("Max Current    :")); printCurent(flight_stats.max_current);
-        osd.setCursor(2,7);  osd.print(F("Used mAh       :")); printMah(esc_stats.used_ah);
-        osd.setCursor(2,8);  osd.print(F("Max RPMs       :")); printRpm(flight_stats.max_rpm, 14);
+        osd.setCursor(2,7);  osd.print(F("Used mAh       :   ")); printMah(esc_stats.used_ah, false);
+        osd.setCursor(2,8);  osd.print(F("Max RPMs       :  ")); printRpm(flight_stats.max_rpm, 14, false);
         osd.setCursor(2,9); osd.print(F("Max Temperature:   ")); printTemperature(flight_stats.max_temperature);
     }
 }
@@ -728,27 +895,70 @@ static void updateLastFlight(){
     }
 }
 
-// Telemetry Live Stats - Always visible on the screen
+/*
+ * Telemetry Live Stats
+ * Always visible on the screen
+ * */
+
+// Battery alarm shown only when armed
+void voltageAlarm(int16_t voltage){
+    static bool shown = false;
+    if(!telemetry.armed || (uint16_t)voltage > (settings.vbat_alarm * 10)){
+        if(shown){
+            osd.clearLine(2);
+            shown = false;
+        }
+        return;
+    }
+    if(shown){
+        osd.clearLine(2);
+    } else {
+        osd.setCursor(7,2);
+        osd.print(F("BATTERY LOW"));
+    }
+    shown = !shown;
+}
+
+// ESC Over Current alarm
+void overCurrentAlarm(uint8_t index, bool active){
+    if(!index){
+        osd.setCursor(0,1);
+    } else if(index == 1){
+        osd.setCursor(22,1);
+    } else if(index == 2){
+        osd.setCursor(0,10);
+    } else if(index == 3){
+        osd.setCursor(22,10);
+    } else {
+        return;
+    }
+    if(active){
+        osd.print(F("ALARM"));
+    } else {
+        osd.print(F("     "));
+    }
+}
+
+//Always visible on the screen
 void drawLiveStats(){
     video_mode_t mode = osd.detectVideoMode();
     static video_mode_t lastMode = mode;
     uint8_t bottomRow = 11;
     int16_t voltage = esc_stats.count?esc_stats.voltage:telemetry.voltage;
+    uint8_t i;
+
     if(mode == VIDEO_NONE){
         mode = lastMode;
     }
     if(mode == VIDEO_PAL){
         bottomRow += 3;
     }
+
     if(lastMode != mode){
         lastMode = mode;
         if(mode == VIDEO_PAL){
             //clear the bottom status line from NTSC
-            osd.setCursor(2,bottomRow);
-            uint8_t i;
-            for(i=0;i<26;i++){
-                osd.write(' ');
-            }
+            osd.clearLine(bottomRow);
         }
     }
 
@@ -756,18 +966,38 @@ void drawLiveStats(){
     if(telemetry.armed){
         printDuration(millis() - flight_stats.duration);
     } else {
-        printFlightMode(false);
+        printFlightMode();
     }
     osd.write(' '); printPercentage(100 - telemetry.failsafe);
     if(esc_stats.count){
-        osd.write(' '); printTemperature(esc_stats.temperature); osd.write(' '); printRpm(esc_stats.rpm, 14);
+        osd.write(' '); printTemperature(esc_stats.temperature); osd.write(' '); printRpm(esc_stats.rpm, 14, true);
     }
 
     osd.setCursor(2,bottomRow);
     printVoltage(voltage);
     if(esc_stats.count){
-        osd.write(' '); printCurent(esc_stats.current); osd.write(' '); osd.write(' '); printMah(esc_stats.used_ah);
+        osd.write(' '); printCurent(esc_stats.current); osd.write(' '); osd.write(' '); printMah(esc_stats.used_ah, true);
+        if(telemetry.armed){
+            for(i=0;i<esc_stats.count;i++){
+                if(info.esc[i].type){
+                    overCurrentAlarm(i, (telemetry.esc[i].current > getEscMaxCurrent(i)));
+                }
+            }
+        } else {
+            //try to detect the ESC types
+            if(!info.count){
+                update_info = true;
+            } else {
+                for(i=0;i<esc_stats.count;i++){
+                    if(!info.esc[i].type){
+                        update_info = true;
+                    }
+                }
+            }
+        }
     }
+
+    voltageAlarm(voltage);
 }
 
 /*
@@ -857,6 +1087,8 @@ void loop(){
         }
         if(itteration > 9){
             itteration = 0;
+            osd.setOffsetLeft(offsetLeft);
+            osd.setOffsetTop(offsetTop);
             if(telemetry.armed || !hasArmSwitch()){
                 loopArmed();
             } else {
@@ -870,25 +1102,41 @@ void loop(){
 }
 
 void setup(){
-    uart_init(115200);
-    memset(&telemetry, 0, sizeof(kiss_telemetry_t));
-    memset(&settings, 0, sizeof(kiss_settings_t));
     //kiss_set_dbg_cb(&onDbg);
     msp_on_packet(&onMSP);
-    osd.begin();
-    //osd.begin(VIDEO_PAL);
+    uart_init(115200);
+
+    //clear telemetry and configuration
+    memset(&telemetry, 0, sizeof(kiss_telemetry_t));
+    memset(&settings, 0, sizeof(kiss_settings_t));
+
+    //run some basic video detection
+    osd.begin(VIDEO_NTSC);
+    uint32_t startDetection = millis();
+    while(osd.detectVideoMode() == VIDEO_NONE && (millis() - startDetection) < 1000){
+        delay(10);
+    }
+    if(osd.getVideoMode() == VIDEO_PAL){
+        osd.begin(VIDEO_PAL);
+    }
+
+    //setup OSD properties
+    osd.setOffsetLeft(offsetLeft);
+    osd.setOffsetTop(offsetTop);
     osd.setPrintMode(PRINT_BUFFERED);
-    osd.setOffsetLeft(18);
-    osd.setOffsetTop(13);
+
+    //show some status
     osd.clearDisplay();
     osd.setCursor(2,2);
     osd.println(F("Connecting to KISS FC..."));
     osd.display();
 
+    //if FC is not available, listen for font upload
     while(!kiss_update()){
-        msp_delay(500);
+        msp_delay(1000);
     }
 
+    //we are now connected to KISS FC
     osd.clearDisplay();
     osd.display();
 }

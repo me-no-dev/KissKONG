@@ -20,7 +20,7 @@
 
 typedef enum {
     VIDEO_NTSC = 0x00,
-    VIDEO_PAL = 0x40,
+    VIDEO_PAL  = 0x40,
     VIDEO_NONE = 0x80
 } video_mode_t;
 
@@ -51,9 +51,10 @@ class MAX7456: public Print {
 
         void begin(video_mode_t vmode=VIDEO_NTSC);
         void reset();
-        void clear();
         void enable();
         void disable();
+        void clear();
+        void clearLine(uint8_t line);
 
         uint8_t width(); //30
         uint8_t height();//13/16 NTSC/PAL
@@ -94,10 +95,6 @@ class MAX7456: public Print {
         void setCursor(uint8_t x, uint8_t y);
         size_t write(uint8_t data);
         size_t write(const uint8_t * buf, size_t len);
-
 };
-
-
-
 
 #endif /* MAX7456_H_ */

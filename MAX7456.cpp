@@ -172,14 +172,6 @@ void MAX7456::reset(){
     enable();
 }
 
-void MAX7456::clear(){
-    _MAX7456_select();
-    _MAX7456_write(MAX7456_DMM, MAX7456_CLEAR_DISPLAY_MEMORY);
-    _MAX7456_deselect();
-    delayMicroseconds(100);
-    enable();
-}
-
 void MAX7456::enable(){
     _MAX7456_select();
     _MAX7456_enable();
@@ -190,6 +182,46 @@ void MAX7456::disable(){
     _MAX7456_select();
     _MAX7456_disable();
     _MAX7456_deselect();
+}
+
+void MAX7456::clear(){
+    _MAX7456_select();
+    _MAX7456_write(MAX7456_DMM, MAX7456_CLEAR_DISPLAY_MEMORY);
+    _MAX7456_deselect();
+    delayMicroseconds(100);
+    enable();
+}
+
+void MAX7456::clearLine(uint8_t line){
+    size_t i;
+    uint16_t index = line * 30;
+
+    if(line >= height()){
+        return;
+    }
+
+    if(_pmode == PRINT_BUFFERED){
+        for(i=0;i<30;i++){
+            _buffer[index+i] = ' ';
+        }
+    } else {
+        _MAX7456_select();
+
+        _MAX7456_write(MAX7456_DMM, MAX7456_AUTO_INCREMENT_MODE);
+        _MAX7456_write(MAX7456_DMAH, index >> 8);
+        _MAX7456_write(MAX7456_DMAL, index & 0xFF);
+
+        for(i=0;i<30;i++){
+            _MAX7456_write_byte(MAX7456_DMDI);
+            _MAX7456_write_byte(' ');
+        }
+
+        _MAX7456_write(MAX7456_DMDI, MAX7456_END);
+        _MAX7456_write(MAX7456_DMM, 0);
+        _MAX7456_enable();
+
+        _MAX7456_deselect();
+    }
 }
 
 video_mode_t MAX7456::getVideoMode(){
