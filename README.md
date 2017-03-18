@@ -41,7 +41,7 @@ If setting is not detetcted, only live data and flight statistics will be shown.
 
 ### Filters
 
-![Filters](images/flters.jpg)
+![Filters](images/filters.jpg)
 
 ### Info
 
