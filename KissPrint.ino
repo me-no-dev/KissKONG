@@ -21,7 +21,7 @@
 //0 -> 999 (4)
 void printPid(int16_t value){
     if(value < 100){
-        osd.write(' ');
+        osd.write(SPACE);
     }
     osd.print(value/10.0, 1);
 }
@@ -34,9 +34,9 @@ void printRate(int16_t value){
 //0 -> 99999 (7)
 void printCurent(int32_t value, bool printName){
     if(value < 10000){
-        osd.write(' ');
+        osd.write(SPACE);
         if(value < 1000){
-            osd.write(' ');
+            osd.write(SPACE);
         }
     }
     osd.print(value/100.0, 2);
@@ -48,7 +48,7 @@ void printCurent(int32_t value, bool printName){
 //0 -> 9999 (6)
 void printVoltage(int32_t value, bool printName){
     if(value < 1000){
-        osd.write(' ');
+        osd.write(SPACE);
     }
     osd.print(value/100.0, 2);
     if(printName){
@@ -60,13 +60,13 @@ void printVoltage(int32_t value, bool printName){
 void printRpm(int32_t value, uint8_t poles, bool printName){
     value = (value*32)/poles;
     if(value < 10000){
-        osd.write(' ');
+        osd.write(SPACE);
         if(value < 1000){
-            osd.write(' ');
+            osd.write(SPACE);
             if(value < 100){
-                osd.write(' ');
+                osd.write(SPACE);
                 if(value < 10){
-                    osd.write(' ');
+                    osd.write(SPACE);
                 }
             }
         }
@@ -80,11 +80,11 @@ void printRpm(int32_t value, uint8_t poles, bool printName){
 //0 -> 9999 (7)
 void printMah(int32_t value, bool printName){
     if(value < 1000){
-        osd.write(' ');
+        osd.write(SPACE);
         if(value < 100){
-            osd.write(' ');
+            osd.write(SPACE);
             if(value < 10){
-                osd.write(' ');
+                osd.write(SPACE);
             }
         }
     }
@@ -97,9 +97,9 @@ void printMah(int32_t value, bool printName){
 //0 -> 100 (4)
 void printPercentage(uint8_t data, bool printName){
     if(data < 100){
-        osd.write(' ');
+        osd.write(SPACE);
         if(data < 10){
-            osd.write(' ');
+            osd.write(SPACE);
         }
     }
     osd.print(data);
@@ -111,9 +111,9 @@ void printPercentage(uint8_t data, bool printName){
 //0 -> 100 (4)
 void printMaxAngle(uint16_t data){
     if(data < 100){
-        osd.write(' ');
+        osd.write(SPACE);
         if(data < 10){
-            osd.write(' ');
+            osd.write(SPACE);
         }
     }
     osd.print(data);
@@ -123,10 +123,10 @@ void printMaxAngle(uint16_t data){
 //-99 -> +999 (4)
 void printTemperature(int16_t value, bool printName){
     if(value < 100 && value >= 0){
-        osd.write(' ');
+        osd.write(SPACE);
     }
     if(value < 10 && value > -10){
-        osd.write(' ');
+        osd.write(SPACE);
     }
     osd.print(value);
     if(printName){
@@ -137,13 +137,13 @@ void printTemperature(int16_t value, bool printName){
 //-18000 -> 18000 (7)
 void printAngle(int16_t value, bool printName){
     if(value >= 0){
-        osd.write(' ');
+        osd.write(SPACE);
     }
     if(value > -10000 && value < 10000){
-        osd.write(' ');
+        osd.write(SPACE);
     }
     if(value > -1000 && value < 1000){
-        osd.write(' ');
+        osd.write(SPACE);
     }
     osd.print(value/100.0, 1);
     if(printName){
@@ -157,7 +157,7 @@ void printDuration(uint32_t duration){
     uint8_t seconds = duration % 60;
     uint32_t minutes = (duration - seconds) / 60;
     if(minutes < 10){
-        osd.write(' ');
+        osd.write(SPACE);
     }
     osd.print(minutes);
     osd.write(':');
@@ -297,5 +297,18 @@ void printLedColor(){
         case LED_GREEN:  osd.print(F(" GREEN")); break;
         case LED_CYAN:   osd.print(F("  CYAN")); break;
         default:         osd.print(F("CUSTOM")); break;
+    }
+}
+
+// (8)
+void printVtxBand(uint8_t band){
+    switch(band){
+        case 0:  osd.print(F("BOSCAM A")); break;
+        case 1:  osd.print(F("BOSCAM B")); break;
+        case 2:  osd.print(F("BOSCAM E")); break;
+        case 3:  osd.print(F("FatShark")); break;
+        case 4:  osd.print(F("RaceBand")); break;
+        case 5:  osd.print(F( "D / 5.3")); break;
+        default: osd.print(F(" UNKNOWN")); break;
     }
 }

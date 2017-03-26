@@ -15,6 +15,7 @@
 */
 #include "KissAndMsp.h"
 #include "MAX7456.h"
+#include "Tramp.h"
 
 MAX7456 osd(10);// MAX7456 attached to SPI and SS pin 10
 
@@ -45,6 +46,83 @@ void msp_delay(uint32_t ms){
         msp_update();
     }
 }
+
+
+
+#define CHANNEL_MAX_INDEX           47
+#define CHANNEL_MAX                 46
+
+// Channels with their Mhz Values
+const uint16_t channelFreqTable[] PROGMEM = {
+    // Channel 1 - 8
+    5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725, // Band A
+    5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866, // Band B
+    5705, 5685, 5665, 5645, 5885, 5905, 5925, 5945, // Band E
+    5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880, // Band F / Airwave
+    5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917, // Band C / Immersion Raceband
+    5362, 5399, 5436, 5473, 5510, 5547, 5584, 5621  // Band D / 5.3
+};
+
+// All Channels of the above List ordered by Mhz
+const uint8_t channelList[] PROGMEM = {
+    40, 41, 42, 43, 44, 45, 46, 47, 19, 32, 18, 17, 33, 16, 7, 34, 8, 24, 6, 9, 25, 5, 35, 10, 26, 4, 11, 27, 3, 36, 12, 28, 2, 13, 29, 37, 1, 14, 30, 0, 15, 38, 20, 21, 39, 22, 23
+};
+
+const char bandLetters[] PROGMEM = {'A','B','E','F','R','D'};
+
+#define BAND_CHAR(b)        (pgm_read_byte_near(bandLetters + (b)))
+#define CHAN_BAND(c)        ((c) >> 3)
+#define CHAN_BAND_CHAR(c)   BAND_CHAR(CHAN_BAND(c))
+
+#define CHAN_NUM(c)         ((c) & 0x7)
+#define CHAN_NUM_CHAR(c)    ('1' + CHAN_NUM(c))
+
+#define CHAN_GLIPH(c)       (0xA0 + (c))
+#define CHAN_BAND_GLIPH(c)  (0x1A + CHAN_BAND(c))
+#define CHAN_NUM_GLIPH(c)   (0x11 + CHAN_NUM(c))
+
+#define BAND_TO_CHAN(b,n)   ( (((b)%6)<<3)|((n)&7))
+
+#define freqFromBand(b,n)   (pgm_read_word_near(channelFreqTable + BAND_TO_CHAN(b,n)))
+#define freqFromIndex(i)    (pgm_read_word_near(channelFreqTable + pgm_read_byte_near(channelList + ((i) % CHANNEL_MAX_INDEX))))
+
+uint8_t channelFromIndex(uint8_t channelIndex){
+    uint8_t loop = 0;
+    uint8_t channel = 0;
+    for(loop = 0; loop < (CHANNEL_MAX_INDEX+1); loop++) {
+        if (pgm_read_byte_near(channelList + loop) == channelIndex) {
+            channel = loop;
+            break;
+        }
+    }
+    return (channel);
+}
+
+uint8_t channelFromFreq(uint16_t freq){
+    uint8_t loop = 0;
+    uint8_t channel = 0;
+    for(loop = 0; loop < CHANNEL_MAX_INDEX; loop++) {
+        if (pgm_read_word_near(channelFreqTable + loop) == freq) {
+            channel = loop;
+            break;
+        }
+    }
+    return (channel);
+}
+
+uint8_t indexFromFreq(uint16_t freq){
+    uint8_t loop = 0;
+    uint8_t index = 0;
+    for(loop = 0; loop < (CHANNEL_MAX_INDEX+1); loop++) {
+        if (freqFromIndex(loop) == freq) {
+            index = loop;
+            break;
+        }
+    }
+    return (index);
+}
+
+const char SPACE = 0x20;
 
 // Table drawing chars (in the OSD font)
 #define TB_HL   "\x01"
@@ -120,7 +198,7 @@ typedef struct {
 
 // Views
 typedef enum {
-    VIEW_SETTINGS, VIEW_PIDS, VIEW_RATES, VIEW_XPIDS, VIEW_FILTERS, VIEW_INFO, VIEW_LAST_FLIGHT
+    VIEW_SETTINGS, VIEW_PIDS, VIEW_RATES, VIEW_XPIDS, VIEW_FILTERS, VIEW_INFO, VIEW_TRAMP, VIEW_LAST_FLIGHT
     , VIEW_OFF, VIEW_MAIN, VIEW_STATS, VIEW_BAD
 } view_index_t;
 
@@ -144,6 +222,8 @@ const kiss_led_color_t kiss_led_colors[LED_CUSTOM] = {
     {0,255,0},
     {0,255,255}
 };
+
+volatile tramp_data_t * tramp = NULL;
 
 //
 static int8_t offsetLeft = 18;
@@ -453,7 +533,7 @@ static void updateSettings(){
     uint8_t i;
     for(i=0; i<SETTINGS_VIEW_NUM_INDEXES; i++){
         osd.setCursor(settings_view_positions[i].x,settings_view_positions[i].y);
-        osd.write((settings_view_current_index == i)?ARROW_RIGHT:' ');
+        osd.write((settings_view_current_index == i)?ARROW_RIGHT:SPACE);
     }
 
     osd.setCursor(19,3); printMah(*settingsValues[0] + 1000, false);
@@ -535,7 +615,7 @@ static void updateFilters(){
     uint8_t i;
     for(i=0; i<FILTERS_VIEW_NUM_INDEXES; i++){
         osd.setCursor(filters_view_positions[i].x,filters_view_positions[i].y);
-        osd.write((filters_view_current_index == i)?ARROW_RIGHT:' ');
+        osd.write((filters_view_current_index == i)?ARROW_RIGHT:SPACE);
     }
 
     osd.setCursor(17,3); printLpfFreq();
@@ -621,7 +701,7 @@ static void updateXtraPids(){
     uint8_t i;
     for(i=0; i<TPA_PID_TABLE_NUM_INDEXES; i++){
         osd.setCursor(tpa_pid_table_positions[i].x,tpa_pid_table_positions[i].y);
-        osd.write((tpa_pid_table_current_index == i)?ARROW_RIGHT:' ');
+        osd.write((tpa_pid_table_current_index == i)?ARROW_RIGHT:SPACE);
     }
 
     osd.setCursor(9,4);  printPid(*xtraPidValues[0]/100);
@@ -682,7 +762,7 @@ static void updatePidTableIndex(){
     uint8_t i;
     for(i=0; i<PID_TABLE_NUM_INDEXES; i++){
         osd.setCursor(pid_table_positions[i].x,pid_table_positions[i].y);
-        osd.write((pid_table_current_index == i)?ARROW_RIGHT:' ');
+        osd.write((pid_table_current_index == i)?ARROW_RIGHT:SPACE);
     }
 }
 
@@ -734,13 +814,13 @@ static void updatePids(){
     }
 
     osd.setCursor(9,4);  printPid(*pidsValues[0]/100);
-    osd.setCursor(15,4); printPid(*pidsValues[1]*10);
+    osd.setCursor(15,4); printMah(*pidsValues[1],false);
     osd.setCursor(21,4); printPid(*pidsValues[2]/100);
     osd.setCursor(9,6);  printPid(*pidsValues[3]/100);
-    osd.setCursor(15,6); printPid(*pidsValues[4]*10);
+    osd.setCursor(15,6); printMah(*pidsValues[4],false);
     osd.setCursor(21,6); printPid(*pidsValues[5]/100);
     osd.setCursor(9,8);  printPid(*pidsValues[6]/100);
-    osd.setCursor(15,8); printPid(*pidsValues[7]*10);
+    osd.setCursor(15,8); printMah(*pidsValues[7],false);
     osd.setCursor(21,8); printPid(*pidsValues[8]/100);
 }
 
@@ -811,7 +891,7 @@ static void drawInfo(){
     osd.setCursor((28 - (strlen(name)+6))/2,line++);
     //frame type?
     printFrameType();
-    osd.write(' ');
+    osd.write(SPACE);
     osd.print(name);
 
     //Found ESCs
@@ -870,6 +950,140 @@ static void updateInfo(){
 }
 
 /*
+ * Tramp VTX
+ * */
+
+#define TRAMP_VIEW_NUM_INDEXES 7
+static uint8_t tramp_view_current_index = 0;
+const osd_pos_t tramp_view_positions[TRAMP_VIEW_NUM_INDEXES] = {
+           {14,3}, //Pit Mode
+           {14,4}, //Freuency
+           {14,5}, //Band
+           {14,6}, //Channel
+           {14,7}, //Power
+        {4,9}, {16,9}
+};
+
+static uint16_t tramp_temp_freq = 0;
+static uint16_t tramp_temp_power = 0;
+static bool tramp_temp_pit = false;
+
+static void drawTramp(){
+    //show flight stats
+    osd.setCursor(8,1);  osd.print(F("Tramp VTX"));
+    osd.setCursor(2,2);  osd.print(F(TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL));
+
+    if(!tramp){
+        osd.setCursor(3,5);  osd.print(F("Tramp VTX Not Detected!"));
+        return;
+    }
+
+    osd.setCursor(2,3);  osd.print(F("PIT Mode   :"));
+    osd.setCursor(2,4);  osd.print(F("Frequency  :"));
+    osd.setCursor(2,5);  osd.print(F("Band       :"));
+    osd.setCursor(2,6);  osd.print(F("Channel    :"));
+    osd.setCursor(2,7);  osd.print(F("Power      :"));
+    osd.setCursor(2,8);  osd.print(F("Temperature:"));
+    osd.setCursor(5,9); osd.print(F("CANCEL"));
+    osd.setCursor(17,9); osd.print(F("SAVE"));
+    tramp_view_current_index = 0;
+    tramp_temp_freq = tramp->freq;
+    tramp_temp_power = tramp->configured_power;
+    tramp_temp_pit = tramp->pit_mode;
+}
+
+static void updateTramp(){
+    if(!tramp){
+        if(currentSticks && currentSticks != STICKS_ERR){
+            setCurrentView(VIEW_MAIN);
+        }
+        return;
+    }
+
+    uint8_t chan = channelFromFreq(tramp_temp_freq);
+    uint8_t chanNum = CHAN_NUM(chan);
+    uint8_t band = CHAN_BAND(chan);
+    uint8_t index = indexFromFreq(tramp_temp_freq);
+
+    if(currentSticks && currentSticks < STICKS_ERR){
+        if(currentSticks == STICKS_DOWN){
+            INCREMENT_VALUE(tramp_view_current_index, 1, TRAMP_VIEW_NUM_INDEXES);
+        } else if(currentSticks == STICKS_UP){
+            DECREMENT_VALUE(tramp_view_current_index, 1, TRAMP_VIEW_NUM_INDEXES);
+        } else if(tramp_view_current_index == (TRAMP_VIEW_NUM_INDEXES - 2) && currentSticks == STICKS_YES){
+            //cancel
+            setCurrentView(VIEW_MAIN);
+        } else if(tramp_view_current_index == (TRAMP_VIEW_NUM_INDEXES - 1) && currentSticks == STICKS_YES){
+            //save
+            tramp->new_freq = tramp_temp_freq;
+            tramp->new_power = tramp_temp_power;
+            tramp->new_pit = tramp_temp_pit;
+            setCurrentView(VIEW_MAIN);
+        } else if(currentSticks == STICKS_YES){
+            if(tramp_view_current_index == 0){
+                //pit
+                tramp_temp_pit = !tramp_temp_pit;
+            } else if(tramp_view_current_index == 1){
+                //freq
+                INCREMENT_VALUE(index, 1, CHANNEL_MAX_INDEX+1);
+                tramp_temp_freq = freqFromIndex(index);
+            } else if(tramp_view_current_index == 2){
+                //band
+                INCREMENT_VALUE(band, 1, 6);
+                tramp_temp_freq = freqFromBand(band, chanNum);
+            } else if(tramp_view_current_index == 3){
+                //chan
+                INCREMENT_VALUE(chanNum, 1, 8);
+                tramp_temp_freq = freqFromBand(band, chanNum);
+            } else if(tramp_view_current_index == 4){
+                //power
+                if(tramp_temp_power <= (tramp->max_power - 25)){
+                    tramp_temp_power += 25;
+                }
+            }
+        } else if(currentSticks == STICKS_NO){
+            if(tramp_view_current_index == 0){
+                //pit
+                tramp_temp_pit = !tramp_temp_pit;
+            } else if(tramp_view_current_index == 1){
+                //freq
+                DECREMENT_VALUE(index, 1, CHANNEL_MAX_INDEX+1);
+                tramp_temp_freq = freqFromIndex(index);
+            } else if(tramp_view_current_index == 2){
+                //band
+                DECREMENT_VALUE(band, 1, 6);
+                tramp_temp_freq = freqFromBand(band, chanNum);
+            } else if(tramp_view_current_index == 3){
+                //chan
+                DECREMENT_VALUE(chanNum, 1, 8);
+                tramp_temp_freq = freqFromBand(band, chanNum);
+            } else if(tramp_view_current_index == 4){
+                //power
+                if(tramp_temp_power >= 25){
+                    tramp_temp_power -= 25;
+                }
+            }
+        }
+    }
+
+    uint8_t i;
+    for(i=0; i<TRAMP_VIEW_NUM_INDEXES; i++){
+        osd.setCursor(tramp_view_positions[i].x,tramp_view_positions[i].y);
+        osd.write((tramp_view_current_index == i)?ARROW_RIGHT:SPACE);
+    }
+
+    chan = channelFromFreq(tramp_temp_freq);
+
+    osd.setCursor(18,3);  osd.print(tramp_temp_pit?F(" ON"):F("OFF"));
+    osd.setCursor(16,4);  printMah(tramp_temp_freq, false); osd.print(F("Mhz"));
+    osd.setCursor(15,5);  printVtxBand(CHAN_BAND(chan));
+    osd.setCursor(19,6);  osd.write(CHAN_NUM_GLIPH(chan));
+    osd.setCursor(17,7);  printPercentage(tramp_temp_power ,false); osd.print(F("mW"));
+    osd.setCursor(17,8);  printTemperature(tramp->temp, true);
+}
+
+
+/*
  * Flight Stats View
  * */
 
@@ -917,7 +1131,8 @@ static void drawMainMenu(){
     osd.setCursor(8,6); osd.print(F("Extra PIDs"));
     osd.setCursor(8,7); osd.print(F("Filters"));
     osd.setCursor(8,8); osd.print(F("Board Info"));
-    osd.setCursor(8,9); osd.print(F("Last Stats"));
+    osd.setCursor(8,9); osd.print(F("Tramp VTX"));
+    osd.setCursor(8,10); osd.print(F("Last Stats"));
 }
 
 static void updateMainMenu(){
@@ -934,13 +1149,13 @@ static void updateMainMenu(){
         }
     }
     uint8_t i;
-    for(i=0; i<(VIEW_MAIN); i++){
+    for(i=0; i<(VIEW_OFF); i++){
         osd.setCursor(4,3+i);
-        osd.write((mainMenuIndex == i)?ARROW_RIGHT:' ');
-        osd.write((mainMenuIndex == i)?ARROW_RIGHT:' ');
+        osd.write((mainMenuIndex == i)?ARROW_RIGHT:SPACE);
+        osd.write((mainMenuIndex == i)?ARROW_RIGHT:SPACE);
         osd.setCursor(19,3+i);
-        osd.write((mainMenuIndex == i)?ARROW_LEFT:' ');
-        osd.write((mainMenuIndex == i)?ARROW_LEFT:' ');
+        osd.write((mainMenuIndex == i)?ARROW_LEFT:SPACE);
+        osd.write((mainMenuIndex == i)?ARROW_LEFT:SPACE);
     }
 
     if(currentSticks == STICKS_RIGHT || currentSticks == STICKS_YES){
@@ -1023,15 +1238,25 @@ void drawLiveStats(){
     } else {
         printFlightMode();
     }
-    osd.write(' '); printPercentage(100 - telemetry.failsafe, true);
-    if(esc_stats.count){
-        osd.write(' '); printTemperature(esc_stats.temperature, true); osd.write(' '); printRpm(esc_stats.rpm, 14, true);
+    osd.write(SPACE); printPercentage(100 - telemetry.failsafe, true);
+    if((telemetry.armed || !tramp) && esc_stats.count){
+        osd.write(SPACE); printTemperature(esc_stats.temperature, true);
+        osd.write(SPACE); printRpm(esc_stats.rpm, 14, true);
+    } else if(tramp){
+        osd.write(SPACE); printTemperature(tramp->temp, true);
+        osd.write(SPACE); printMah(tramp->freq, false); osd.write(CHAN_GLIPH(channelFromFreq(tramp->freq)));
+        osd.write(SPACE);
+        if(tramp->pit_mode){
+            osd.print(F("PIT"));
+        } else {
+            printPercentage(tramp->configured_power ,false);
+        }
     }
 
     osd.setCursor(2,bottomRow);
     printVoltage(voltage, true);
     if(esc_stats.count){
-        osd.write(' '); printCurent(esc_stats.current, true); osd.write(' '); osd.write(' '); printMah(esc_stats.used_ah, true);
+        osd.write(SPACE); printCurent(esc_stats.current, true); osd.write(SPACE); osd.write(SPACE); printMah(esc_stats.used_ah, true);
         if(telemetry.armed){
             for(i=0;i<esc_stats.count;i++){
                 if(info.esc[i].type){
@@ -1066,6 +1291,7 @@ static view_methods_t views[VIEW_BAD] = {
         {drawXtraPids, updateXtraPids, NULL},   //Xtra PIDs
         {drawFilters, updateFilters, NULL},     //Filters
         {drawInfo, updateInfo, NULL},           //Info
+        {drawTramp, updateTramp, NULL},           //Tramp VTX
         {drawStats, updateLastFlight, NULL},    //Last Flight
         {NULL, NULL, NULL},                     //Off
         {drawMainMenu, updateMainMenu, NULL},   //Main Menu
@@ -1143,6 +1369,9 @@ void loop(){
         if(telemetry.armed) {
             collectStats();
         }
+        if(trampUpdate()){
+            tramp = trampGetData();
+        }
         if(itteration > 9){
             itteration = 0;
             osd.setOffsetLeft(offsetLeft);
@@ -1187,6 +1416,25 @@ void setup(){
     osd.clearDisplay();
     osd.setCursor(2,2);
     osd.println(F("Connecting to KISS FC..."));
+    /*
+    uint16_t index = 0;
+    uint8_t i;
+    osd.setCursor(0,0);
+    while(index < 256){
+        uint16_t left = (256 - index);
+        if(left > 27){
+            left = 27;
+        }
+        for(i=0; i<left; i++){
+            if(index == '\r' || index == '\n'){
+                index++;
+            } else {
+                osd.write((uint8_t)(index++));
+            }
+        }
+        osd.write('\n');
+    }
+    */
     osd.display();
 
     //if FC is not available, listen for font upload
@@ -1197,6 +1445,7 @@ void setup(){
     //we are now connected to KISS FC
     osd.clearDisplay();
     osd.display();
+    trampInit();
 }
 /*
 void onDbg(uint8_t cmd, uint8_t * data, uint8_t len){
@@ -1209,7 +1458,7 @@ void onDbg(uint8_t cmd, uint8_t * data, uint8_t len){
     osd.print(F("]:"));
     uint8_t i;
     for(i=0;i<len;i++){
-        osd.write(' ');
+        osd.write(SPACE);
         osd.print(data[i], HEX);
     }
     osd.display();
