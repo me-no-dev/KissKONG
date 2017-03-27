@@ -17,7 +17,7 @@
 #include "MAX7456.h"
 #include "Tramp.h"
 
-MAX7456 osd(10);// MAX7456 attached to SPI and SS pin 10
+MAX7456 osd(6);// MAX7456 attached to SPI and SS pin 10
 
 /*
  * MSP implementation for Font Upload
@@ -1393,10 +1393,14 @@ void setup(){
     msp_on_packet(&onMSP);
     uart_init(115200);
 
+    pinMode(10, OUTPUT);
+    digitalWrite(10, HIGH);
+
     //clear telemetry and configuration
     memset(&telemetry, 0, sizeof(kiss_telemetry_t));
     memset(&settings, 0, sizeof(kiss_settings_t));
 
+    delay(100);
     //run some basic video detection
     osd.begin(VIDEO_NTSC);
     uint32_t startDetection = millis();
@@ -1411,32 +1415,35 @@ void setup(){
     osd.setOffsetLeft(offsetLeft);
     osd.setOffsetTop(offsetTop);
     osd.setPrintMode(PRINT_BUFFERED);
-
     //show some status
     osd.clearDisplay();
     osd.setCursor(2,2);
     osd.println(F("Connecting to KISS FC..."));
-    /*
-    uint16_t index = 0;
-    uint8_t i;
-    osd.setCursor(0,0);
-    while(index < 256){
-        uint16_t left = (256 - index);
-        if(left > 27){
-            left = 27;
-        }
-        for(i=0; i<left; i++){
-            if(index == '\r' || index == '\n'){
-                index++;
-            } else {
-                osd.write((uint8_t)(index++));
-            }
-        }
-        osd.write('\n');
-    }
-    */
     osd.display();
-
+#if 0
+    while(true){
+        uint16_t index = 0;
+        uint8_t i;
+        osd.clearDisplay();
+        osd.setCursor(0,0);
+        while(index < 256){
+            uint16_t left = (256 - index);
+            if(left > 27){
+                left = 27;
+            }
+            for(i=0; i<left; i++){
+                if(index == '\r' || index == '\n'){
+                    index++;
+                } else {
+                    osd.write((uint8_t)(index++));
+                }
+            }
+            osd.write('\n');
+        }
+        osd.display();
+        delay(100);
+    }
+#endif
     //if FC is not available, listen for font upload
     while(!kiss_update()){
         msp_delay(1000);

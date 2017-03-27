@@ -321,10 +321,8 @@ void MAX7456::setOffsetTop(int8_t pixels){
 //index 0-30, y 0-390/480 NTSC/PAL
 size_t MAX7456::write(uint16_t index, const uint8_t * buf, size_t len){
     size_t i;
-    size_t maxLen = 360;
-    if(_vmode){
-        maxLen = 450;
-    }
+    size_t maxLen = 480;
+
     if(index >= maxLen){
         return 0;
     }
@@ -354,10 +352,7 @@ size_t MAX7456::write(uint16_t index, const uint8_t * buf, size_t len){
 }
 
 size_t MAX7456::write(uint16_t index, uint8_t data){
-    size_t maxLen = 360;
-    if(_vmode){
-        maxLen = 450;
-    }
+    size_t maxLen = 480;
 
     if(index >= maxLen){
         return 0;
@@ -379,7 +374,7 @@ size_t MAX7456::write(uint16_t index, uint8_t data){
  * */
 void MAX7456::clearDisplay(){
     if(_pmode == PRINT_BUFFERED){
-        memset(_buffer, 0, 480);
+        memset(_buffer, 0x20, 480);
     } else {
         clear();
     }
@@ -387,7 +382,7 @@ void MAX7456::clearDisplay(){
 
 void MAX7456::display(){
     if(_pmode == PRINT_BUFFERED){
-        write(0,0,_buffer,width() * height());
+        write(0,0,_buffer,480);
     }
 }
 
