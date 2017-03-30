@@ -549,13 +549,13 @@ static void updateSettings(){
  * Filters View
  * */
 
-#define FILTERS_VIEW_NUM_INDEXES 7
+#define FILTERS_VIEW_NUM_INDEXES 10
 static uint8_t filters_view_current_index = 0;
 const osd_pos_t filters_view_positions[FILTERS_VIEW_NUM_INDEXES] = {
            {16,3}, //LPF
-           {16,5}, //Notch Enable
-           {16,6}, //Notch Center Freqency
-           {16,7}, //Notch Cutoff Frequency
+        {11,5}, {17,5}, //Notch Enable
+        {11,6}, {17,6},//Notch Center Freqency
+        {11,7}, {17,7}, //Notch Cutoff Frequency
            {16,9}, //Yaw Strength
         {4,10}, {17,10}
 };
@@ -564,10 +564,10 @@ static void drawFilters(){
     osd.setCursor(10,1);  osd.print(F("Filters"));
     osd.setCursor(2,2);  osd.print(F(TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL TB_HL));
     osd.setCursor(2,3);  osd.print(F("LPF Freq    :"));
-    osd.setCursor(8,4);  osd.print(F("Notch Filter"));
-    osd.setCursor(2,5);  osd.print(F("Enabled     :"));
-    osd.setCursor(2,6);  osd.print(F("Center Freq :"));
-    osd.setCursor(2,7);  osd.print(F("Cutoff Freq :"));
+    osd.setCursor(2,4);  osd.print(F("Notch Flt ROLL PITCH"));
+    osd.setCursor(2,5);  osd.print(F("Enabled:"));
+    osd.setCursor(2,6);  osd.print(F("Center :"));
+    osd.setCursor(2,7);  osd.print(F("Cutoff :"));
     osd.setCursor(9,8);  osd.print(F("Yaw Filter"));
     osd.setCursor(2,9);  osd.print(F("Yaw Strength:"));
     osd.setCursor(5,10); osd.print(F("CANCEL"));
@@ -589,24 +589,36 @@ static void updateFilters(){
             if(filters_view_current_index == 0){
                 INCREMENT_VALUE(settings.lpf, 1, 7);
             } else if(filters_view_current_index == 1){
-                settings.notch_filter_enable = !settings.notch_filter_enable;
-            } else if(filters_view_current_index == 2){
-                INCREMENT_VALUE(settings.notch_filter_center, 1, 1001);
+                settings.notch_filter[0].enable = !settings.notch_filter[0].enable;
             } else if(filters_view_current_index == 3){
-                INCREMENT_VALUE(settings.notch_filter_cut, 1, 1001);
+                INCREMENT_VALUE(settings.notch_filter[0].center_freq, 1, 1001);
+            } else if(filters_view_current_index == 5){
+                INCREMENT_VALUE(settings.notch_filter[0].cutoff_freq, 1, 1001);
+            } else if(filters_view_current_index == 2){
+                settings.notch_filter[0].enable = !settings.notch_filter[1].enable;
             } else if(filters_view_current_index == 4){
+                INCREMENT_VALUE(settings.notch_filter[1].center_freq, 1, 1001);
+            } else if(filters_view_current_index == 6){
+                INCREMENT_VALUE(settings.notch_filter[1].cutoff_freq, 1, 1001);
+            } else if(filters_view_current_index == 7){
                 INCREMENT_VALUE(settings.yaw_c_filter, 1, 98);
             }
         } else if(currentSticks == STICKS_NO){
             if(filters_view_current_index == 0){
                 DECREMENT_VALUE(settings.lpf, 1, 7);
             } else if(filters_view_current_index == 1){
-                settings.notch_filter_enable = !settings.notch_filter_enable;
-            } else if(filters_view_current_index == 2){
-                DECREMENT_VALUE(settings.notch_filter_center, 1, 1001);
+                settings.notch_filter[0].enable = !settings.notch_filter[0].enable;
             } else if(filters_view_current_index == 3){
-                DECREMENT_VALUE(settings.notch_filter_cut, 1, 1001);
+                DECREMENT_VALUE(settings.notch_filter[0].center_freq, 1, 1001);
+            } else if(filters_view_current_index == 5){
+                DECREMENT_VALUE(settings.notch_filter[0].cutoff_freq, 1, 1001);
+            } else if(filters_view_current_index == 2){
+                settings.notch_filter[0].enable = !settings.notch_filter[1].enable;
             } else if(filters_view_current_index == 4){
+                DECREMENT_VALUE(settings.notch_filter[1].center_freq, 1, 1001);
+            } else if(filters_view_current_index == 6){
+                DECREMENT_VALUE(settings.notch_filter[1].cutoff_freq, 1, 1001);
+            } else if(filters_view_current_index == 7){
                 DECREMENT_VALUE(settings.yaw_c_filter, 1, 98);
             }
         }
@@ -619,9 +631,14 @@ static void updateFilters(){
     }
 
     osd.setCursor(17,3); printLpfFreq();
-    osd.setCursor(19,5); settings.notch_filter_enable?osd.print(F("YES")):osd.print(F(" NO"));
-    osd.setCursor(18,6); printMah(settings.notch_filter_center, false);
-    osd.setCursor(18,7); printMah(settings.notch_filter_cut, false);
+    osd.setCursor(13,5); settings.notch_filter[0].enable?osd.print(F("YES")):osd.print(F(" NO"));
+    osd.setCursor(12,6); printMah(settings.notch_filter[0].center_freq, false);
+    osd.setCursor(12,7); printMah(settings.notch_filter[0].cutoff_freq, false);
+
+    osd.setCursor(19,5); settings.notch_filter[0].enable?osd.print(F("YES")):osd.print(F(" NO"));
+    osd.setCursor(18,6); printMah(settings.notch_filter[0].center_freq, false);
+    osd.setCursor(18,7); printMah(settings.notch_filter[0].cutoff_freq, false);
+
     osd.setCursor(18,9); printMah(settings.yaw_c_filter, false);
 }
 
@@ -1388,8 +1405,29 @@ void loop(){
     }
 }
 
+#ifdef KISS_ENABLE_DEBUG_CALLBACK
+void onDbg(uint8_t cmd, uint8_t * data, uint8_t len){
+    if(osd.getVideoMode() != VIDEO_PAL){
+        return;
+    }
+    osd.setCursor(0,11);
+    osd.print(F("DBG["));
+    osd.print(len);
+    osd.print(F("]:"));
+    uint8_t i;
+    for(i=0;i<len;i++){
+        osd.write(SPACE);
+        osd.print(data[i], HEX);
+    }
+    osd.display();
+    delay(1000);
+}
+#endif
+
 void setup(){
-    //kiss_set_dbg_cb(&onDbg);
+#ifdef KISS_ENABLE_DEBUG_CALLBACK
+    kiss_set_dbg_cb(&onDbg);
+#endif
     msp_on_packet(&onMSP);
     uart_init(115200);
 
@@ -1454,21 +1492,3 @@ void setup(){
     osd.display();
     trampInit();
 }
-/*
-void onDbg(uint8_t cmd, uint8_t * data, uint8_t len){
-    if(osd.getVideoMode() != VIDEO_PAL){
-        return;
-    }
-    osd.setCursor(0,11);
-    osd.print(F("DBG["));
-    osd.print(len);
-    osd.print(F("]:"));
-    uint8_t i;
-    for(i=0;i<len;i++){
-        osd.write(SPACE);
-        osd.print(data[i], HEX);
-    }
-    osd.display();
-    delay(1000);
-}
-*/

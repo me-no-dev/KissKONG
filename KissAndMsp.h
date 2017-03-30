@@ -167,6 +167,12 @@ typedef struct {
        uint8_t b;
 } kiss_led_color_t;
 
+typedef struct {
+        uint8_t enable;
+        uint16_t center_freq;
+        uint16_t cutoff_freq;
+} kiss_notch_filter_t;
+
 typedef struct { // len 144
     uint16_t pid_p[3];      // v/1000
     uint16_t pid_i[3];      // v/1000
@@ -198,16 +204,20 @@ typedef struct { // len 144
     uint16_t tpa[3];        // v/1000
     uint8_t oneshot_42;     // is zero
     uint8_t failsafe_seconds;
+    // v100
     uint8_t board_rotation;
     uint8_t is_active;
+    // v101
     uint8_t custom_tpa;
     uint8_t tpa_bp[2];
     uint8_t tpa_bpi[4];
     uint8_t voltage_influence;
     int16_t voltage[3];     // v/10
     uint8_t influence[3];
-    uint8_t secret;
+    // v102
+    uint8_t vtx_channel;
     uint8_t logger_config;
+    // v103
     kiss_led_color_t rgb;
     uint16_t vbat_alarm;    // v/10
     int16_t cbo[3];
@@ -215,10 +225,18 @@ typedef struct { // len 144
     uint8_t lap_timer_type;
     uint16_t transponder_id;
     uint8_t logger_debug_vars;
-    uint8_t notch_filter_enable;
-    uint16_t notch_filter_center;
-    uint16_t notch_filter_cut;
+    // v104
+    kiss_notch_filter_t notch_filter[2];
     uint8_t yaw_c_filter;
+    // v106
+    uint8_t vtx_type;
+    uint16_t vtx_power_low;
+    uint16_t vtx_power_high;
+    kiss_aux_config_t aux567[3];
+    uint16_t mah_alarm;
+    uint8_t lipo_connected;
+    uint8_t deadband[3];
+    uint8_t motor_buzzer;
 } kiss_settings_t;
 
 /*

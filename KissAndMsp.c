@@ -32,7 +32,7 @@
 #define KISS_RX_TIMEOUT 50   //time in ms for response to be received from FC
 
 //KISS Set Settings Packet
-typedef struct { // len is 134, but output 142
+typedef struct { // len is 153, but output 161
     uint16_t pid_p[3];  // v*1000
     uint16_t pid_i[3];  // v*1000
     uint16_t pid_d[3];  // v*1000
@@ -61,16 +61,20 @@ typedef struct { // len is 134, but output 142
     uint16_t tpa[3];      // v*1000
     uint8_t oneshot_42;
     uint8_t failsafe_seconds;
+    // v100 93
     uint8_t activation_key[4];
     uint8_t board_rotation;
+    // v101 110
     uint8_t custom_tpa;
     uint8_t tpa_bp[2];
     uint8_t tpa_bpi[4];
     uint8_t voltage_influence;
     int16_t voltage[3];   // v*10
     uint8_t influence[3];
-    uint8_t secret;
+    // v102 112
+    uint8_t vtx_channel;
     uint8_t logger_config;
+    // v103 136
     kiss_led_color_t rgb;
     uint16_t vbat_alarm;  // v*10
     int16_t cbo[3];
@@ -78,10 +82,17 @@ typedef struct { // len is 134, but output 142
     uint8_t lap_timer_type;
     uint16_t transponder_id;
     uint8_t logger_debug_vars;
-    uint8_t notch_filter_enable;
-    uint16_t notch_filter_center;
-    uint16_t notch_filter_cut;
+    // v104 147
+    kiss_notch_filter_t notch_filter[2];
     uint8_t yaw_c_filter;
+    // v106 161
+    uint8_t vtx_type;
+    uint16_t vtx_power_low;
+    uint16_t vtx_power_high;
+    kiss_aux_config_t aux567[3];
+    uint16_t mah_alarm;
+    uint8_t deadband[3];
+    uint8_t motor_buzzer;
 } kiss_set_settings_t;
 
 //KISS parse states
@@ -241,11 +252,11 @@ bool kiss_test_motors(kiss_test_motors_t * motors){
 }
 
 bool kiss_set_settings(kiss_settings_t * data_in){
-    uint8_t * tmp = (uint8_t *)malloc(142);
+    uint8_t * tmp = (uint8_t *)malloc(161);
     if(!tmp || !_can_send()){
         return false;
     }
-    memset(tmp, 0, 142);
+    memset(tmp, 0, 161);
     kiss_set_settings_t * data_out = (kiss_set_settings_t*)tmp;
     cpUint(pid_p[0]);
     cpUint(pid_p[1]);
@@ -310,7 +321,7 @@ bool kiss_set_settings(kiss_settings_t * data_in){
     cpByte(influence[0]);
     cpByte(influence[1]);
     cpByte(influence[2]);
-    cpByte(secret);
+    cpByte(vtx_channel);
     cpByte(logger_config);
     cpByte(rgb.r);
     cpByte(rgb.g);
@@ -323,11 +334,25 @@ bool kiss_set_settings(kiss_settings_t * data_in){
     cpByte(lap_timer_type);
     cpUint(transponder_id);
     cpByte(logger_debug_vars);
-    cpByte(notch_filter_enable);
-    cpUint(notch_filter_center);
-    cpUint(notch_filter_cut);
+    cpByte(notch_filter[0].enable);
+    cpUint(notch_filter[0].center_freq);
+    cpUint(notch_filter[0].cutoff_freq);
+    cpByte(notch_filter[1].enable);
+    cpUint(notch_filter[1].center_freq);
+    cpUint(notch_filter[1].cutoff_freq);
     cpByte(yaw_c_filter);
-    bool res = _kiss_send_cmd(KISS_SET_SETTINGS, tmp, 142, NULL, NULL);
+    cpByte(vtx_type);
+    cpUint(vtx_power_low);
+    cpUint(vtx_power_high);
+    cpByte(aux567[0].value);
+    cpByte(aux567[1].value);
+    cpByte(aux567[2].value);
+    cpUint(mah_alarm);
+    cpByte(deadband[0]);
+    cpByte(deadband[1]);
+    cpByte(deadband[2]);
+    cpByte(motor_buzzer);
+    bool res = _kiss_send_cmd(KISS_SET_SETTINGS, tmp, 161, NULL, NULL);
     free(tmp);
     if(res && (_kiss_rx_len != 1 || _kiss_rx_buffer[0] != 6)){
         return false;
@@ -387,8 +412,13 @@ bool kiss_get_settings(kiss_settings_t * data){
     ttInt(cbo[1]);
     ttInt(cbo[2]);
     ttUint(transponder_id);
-    ttUint(notch_filter_center);
-    ttUint(notch_filter_cut);
+    ttUint(notch_filter[0].center_freq);
+    ttUint(notch_filter[0].cutoff_freq);
+    ttUint(notch_filter[1].center_freq);
+    ttUint(notch_filter[1].cutoff_freq);
+    ttUint(vtx_power_low);
+    ttUint(vtx_power_high);
+    ttUint(mah_alarm);
     return true;
 }
 
