@@ -251,6 +251,7 @@ void printRxType(){
         case 13: osd.print(F("RPTY")); break;
         case 14: osd.print(F("SRXL")); break;
         case 15: osd.print(F("SBNI")); break;
+        case 16: osd.print(F("JRXB")); break;
         default: osd.print(F("OTHR")); break;
     }
 }

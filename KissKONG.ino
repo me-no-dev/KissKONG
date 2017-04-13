@@ -155,8 +155,11 @@ const char SPACE = 0x20;
 #define AXIS_UD telemetry.pitch //Up+Down
 #define AXIS_YN telemetry.yaw   //Yes(Add)+No(Substract)
 
-#define INCREMENT_VALUE(i,v,m) i = ((i + (v)) % (m))
-#define DECREMENT_VALUE(i,v,m) i = (i >= (v))?(i - (v)):(i + (m) - (v))
+#define INCREMENT_WRAP(i,v,m) i = ((i + (v)) % ((m) + 1))
+#define DECREMENT_WRAP(i,v,m) i = (i >= (v))?(i - (v)):(((m) + 1) - ((v) - i))
+
+#define INCREMENT_VALUE(i,v,m) i = (((i + (v)) > (m))?(m):(i + (v)))
+#define DECREMENT_VALUE(i,v) i = ((i < (v))?0:(i - (v)))
 
 #define INCREMENT_IVALUE(i,v,m) i = ((i + (v)) < (m))?(i + (v)):(m)
 #define DECREMENT_IVALUE(i,v,m) i = ((i - (v)) > (m))?(i - (v)):(m)
@@ -496,35 +499,35 @@ static void drawSettings(){
 static void updateSettings(){
     if(currentSticks && currentSticks < STICKS_ERR){
         if(currentSticks == STICKS_DOWN){
-            INCREMENT_VALUE(settings_view_current_index, 1, SETTINGS_VIEW_NUM_INDEXES);
+            INCREMENT_WRAP(settings_view_current_index, 1, SETTINGS_VIEW_NUM_INDEXES - 1);
         } else if(currentSticks == STICKS_UP){
-            DECREMENT_VALUE(settings_view_current_index, 1, SETTINGS_VIEW_NUM_INDEXES);
+            DECREMENT_WRAP(settings_view_current_index, 1, SETTINGS_VIEW_NUM_INDEXES - 1);
         } else if(settings_view_current_index == (SETTINGS_VIEW_NUM_INDEXES - 2) && currentSticks == STICKS_YES){
             settingsRestore();
         } else if(settings_view_current_index == (SETTINGS_VIEW_NUM_INDEXES - 1) && currentSticks == STICKS_YES){
             settingsSave();
         } else if(currentSticks == STICKS_YES){
             if(settings_view_current_index < 4){
-                INCREMENT_VALUE(*settingsValues[settings_view_current_index], 1, 1001);
+                INCREMENT_VALUE(*settingsValues[settings_view_current_index], 1, 1000);
             } else if(settings_view_current_index == 4){
                 INCREMENT_VALUE(settings.vbat_alarm, 1, 300);
             } else if(settings_view_current_index == 5){
-                INCREMENT_VALUE(settings.oneshot_125, 1, 6);
+                INCREMENT_WRAP(settings.oneshot_125, 1, 6);
             } else if(settings_view_current_index == 6){
                 uint8_t c = getColorIndex();
-                INCREMENT_VALUE(c, 1, LED_CUSTOM);
+                INCREMENT_WRAP(c, 1, LED_CUSTOM - 1);
                 setColorIndex(c);
             }
         } else if(currentSticks == STICKS_NO){
             if(settings_view_current_index < 4){
-                DECREMENT_VALUE(*settingsValues[settings_view_current_index], 1, 1001);
+                DECREMENT_VALUE(*settingsValues[settings_view_current_index], 1);
             } else if(settings_view_current_index == 4){
-                DECREMENT_VALUE(settings.vbat_alarm, 1, 300);
+                DECREMENT_VALUE(settings.vbat_alarm, 1);
             } else if(settings_view_current_index == 5){
-                DECREMENT_VALUE(settings.oneshot_125, 1, 6);
+                DECREMENT_WRAP(settings.oneshot_125, 1, 6);
             } else if(settings_view_current_index == 6){
                 uint8_t c = getColorIndex();
-                DECREMENT_VALUE(c, 1, LED_CUSTOM);
+                DECREMENT_WRAP(c, 1, LED_CUSTOM - 1);
                 setColorIndex(c);
             }
         }
@@ -578,48 +581,48 @@ static void drawFilters(){
 static void updateFilters(){
     if(currentSticks && currentSticks < STICKS_ERR){
         if(currentSticks == STICKS_DOWN){
-            INCREMENT_VALUE(filters_view_current_index, 1, FILTERS_VIEW_NUM_INDEXES);
+            INCREMENT_WRAP(filters_view_current_index, 1, FILTERS_VIEW_NUM_INDEXES - 1);
         } else if(currentSticks == STICKS_UP){
-            DECREMENT_VALUE(filters_view_current_index, 1, FILTERS_VIEW_NUM_INDEXES);
+            DECREMENT_WRAP(filters_view_current_index, 1, FILTERS_VIEW_NUM_INDEXES - 1);
         } else if(filters_view_current_index == (FILTERS_VIEW_NUM_INDEXES - 2) && currentSticks == STICKS_YES){
             settingsRestore();
         } else if(filters_view_current_index == (FILTERS_VIEW_NUM_INDEXES - 1) && currentSticks == STICKS_YES){
             settingsSave();
         } else if(currentSticks == STICKS_YES){
             if(filters_view_current_index == 0){
-                INCREMENT_VALUE(settings.lpf, 1, 7);
+                INCREMENT_VALUE(settings.lpf, 1, 6);
             } else if(filters_view_current_index == 1){
                 settings.notch_filter[0].enable = !settings.notch_filter[0].enable;
             } else if(filters_view_current_index == 3){
-                INCREMENT_VALUE(settings.notch_filter[0].center_freq, 1, 1001);
+                INCREMENT_VALUE(settings.notch_filter[0].center_freq, 1, 1000);
             } else if(filters_view_current_index == 5){
-                INCREMENT_VALUE(settings.notch_filter[0].cutoff_freq, 1, 1001);
+                INCREMENT_VALUE(settings.notch_filter[0].cutoff_freq, 1, 1000);
             } else if(filters_view_current_index == 2){
-                settings.notch_filter[0].enable = !settings.notch_filter[1].enable;
+                settings.notch_filter[1].enable = !settings.notch_filter[1].enable;
             } else if(filters_view_current_index == 4){
-                INCREMENT_VALUE(settings.notch_filter[1].center_freq, 1, 1001);
+                INCREMENT_VALUE(settings.notch_filter[1].center_freq, 1, 1000);
             } else if(filters_view_current_index == 6){
-                INCREMENT_VALUE(settings.notch_filter[1].cutoff_freq, 1, 1001);
+                INCREMENT_VALUE(settings.notch_filter[1].cutoff_freq, 1, 1000);
             } else if(filters_view_current_index == 7){
                 INCREMENT_VALUE(settings.yaw_c_filter, 1, 98);
             }
         } else if(currentSticks == STICKS_NO){
             if(filters_view_current_index == 0){
-                DECREMENT_VALUE(settings.lpf, 1, 7);
+                DECREMENT_VALUE(settings.lpf, 1);
             } else if(filters_view_current_index == 1){
                 settings.notch_filter[0].enable = !settings.notch_filter[0].enable;
             } else if(filters_view_current_index == 3){
-                DECREMENT_VALUE(settings.notch_filter[0].center_freq, 1, 1001);
+                DECREMENT_VALUE(settings.notch_filter[0].center_freq, 1);
             } else if(filters_view_current_index == 5){
-                DECREMENT_VALUE(settings.notch_filter[0].cutoff_freq, 1, 1001);
+                DECREMENT_VALUE(settings.notch_filter[0].cutoff_freq, 1);
             } else if(filters_view_current_index == 2){
-                settings.notch_filter[0].enable = !settings.notch_filter[1].enable;
+                settings.notch_filter[1].enable = !settings.notch_filter[1].enable;
             } else if(filters_view_current_index == 4){
-                DECREMENT_VALUE(settings.notch_filter[1].center_freq, 1, 1001);
+                DECREMENT_VALUE(settings.notch_filter[1].center_freq, 1);
             } else if(filters_view_current_index == 6){
-                DECREMENT_VALUE(settings.notch_filter[1].cutoff_freq, 1, 1001);
+                DECREMENT_VALUE(settings.notch_filter[1].cutoff_freq, 1);
             } else if(filters_view_current_index == 7){
-                DECREMENT_VALUE(settings.yaw_c_filter, 1, 98);
+                DECREMENT_VALUE(settings.yaw_c_filter, 1);
             }
         }
     }
@@ -635,9 +638,9 @@ static void updateFilters(){
     osd.setCursor(12,6); printMah(settings.notch_filter[0].center_freq, false);
     osd.setCursor(12,7); printMah(settings.notch_filter[0].cutoff_freq, false);
 
-    osd.setCursor(19,5); settings.notch_filter[0].enable?osd.print(F("YES")):osd.print(F(" NO"));
-    osd.setCursor(18,6); printMah(settings.notch_filter[0].center_freq, false);
-    osd.setCursor(18,7); printMah(settings.notch_filter[0].cutoff_freq, false);
+    osd.setCursor(19,5); settings.notch_filter[1].enable?osd.print(F("YES")):osd.print(F(" NO"));
+    osd.setCursor(18,6); printMah(settings.notch_filter[1].center_freq, false);
+    osd.setCursor(18,7); printMah(settings.notch_filter[1].cutoff_freq, false);
 
     osd.setCursor(18,9); printMah(settings.yaw_c_filter, false);
 }
@@ -689,28 +692,28 @@ static void drawXtraPids(){
 static void updateXtraPids(){
     if(currentSticks && currentSticks < STICKS_ERR){
         if(currentSticks == STICKS_LEFT){
-            DECREMENT_VALUE(tpa_pid_table_current_index, 1, TPA_PID_TABLE_NUM_INDEXES);
+            DECREMENT_WRAP(tpa_pid_table_current_index, 1, TPA_PID_TABLE_NUM_INDEXES - 1);
         } else if(currentSticks == STICKS_RIGHT){
-            INCREMENT_VALUE(tpa_pid_table_current_index, 1, TPA_PID_TABLE_NUM_INDEXES);
+            INCREMENT_WRAP(tpa_pid_table_current_index, 1, TPA_PID_TABLE_NUM_INDEXES - 1);
         } else if(currentSticks == STICKS_DOWN){
-            INCREMENT_VALUE(tpa_pid_table_current_index, (tpa_pid_table_current_index>5)?1:3, TPA_PID_TABLE_NUM_INDEXES);
+            INCREMENT_WRAP(tpa_pid_table_current_index, (tpa_pid_table_current_index>5)?1:3, TPA_PID_TABLE_NUM_INDEXES - 1);
         } else if(currentSticks == STICKS_UP){
-            DECREMENT_VALUE(tpa_pid_table_current_index, (tpa_pid_table_current_index<7)?3:1, TPA_PID_TABLE_NUM_INDEXES);
+            DECREMENT_WRAP(tpa_pid_table_current_index, (tpa_pid_table_current_index<7)?3:1, TPA_PID_TABLE_NUM_INDEXES - 1);
         } else if(tpa_pid_table_current_index == (TPA_PID_TABLE_NUM_INDEXES - 2) && currentSticks == STICKS_YES){
             settingsRestore();
         } else if(tpa_pid_table_current_index == (TPA_PID_TABLE_NUM_INDEXES - 1) && currentSticks == STICKS_YES){
             settingsSave();
         } else if(currentSticks == STICKS_YES){
             if(tpa_pid_table_current_index == 6){
-                INCREMENT_VALUE(*xtraPidValues[6], 14, 2574);
+                INCREMENT_WRAP(*xtraPidValues[6], 14, 2574);
             } else {
-                INCREMENT_VALUE(*xtraPidValues[tpa_pid_table_current_index], 100, 10000);
+                INCREMENT_VALUE(*xtraPidValues[tpa_pid_table_current_index], 100, 32000);
             }
         } else if(currentSticks == STICKS_NO){
             if(tpa_pid_table_current_index == 6){
-                DECREMENT_VALUE(*xtraPidValues[6], 14, 2574);
+                DECREMENT_WRAP(*xtraPidValues[6], 14, 2574);
             } else {
-                DECREMENT_VALUE(*xtraPidValues[tpa_pid_table_current_index], 100, 10000);
+                DECREMENT_VALUE(*xtraPidValues[tpa_pid_table_current_index], 100);
             }
         }
     }
@@ -762,13 +765,13 @@ static void drawPidTable(){
 static void updatePidTableIndex(){
     if(currentSticks && currentSticks < STICKS_ERR){
         if(currentSticks == STICKS_LEFT){
-            DECREMENT_VALUE(pid_table_current_index, 1, PID_TABLE_NUM_INDEXES);
+            DECREMENT_WRAP(pid_table_current_index, 1, PID_TABLE_NUM_INDEXES - 1);
         } else if(currentSticks == STICKS_RIGHT){
-            INCREMENT_VALUE(pid_table_current_index, 1, PID_TABLE_NUM_INDEXES);
+            INCREMENT_WRAP(pid_table_current_index, 1, PID_TABLE_NUM_INDEXES - 1);
         } else if(currentSticks == STICKS_DOWN){
-            INCREMENT_VALUE(pid_table_current_index, 3, PID_TABLE_NUM_INDEXES);
+            INCREMENT_WRAP(pid_table_current_index, 3, PID_TABLE_NUM_INDEXES - 1);
         } else if(currentSticks == STICKS_UP){
-            DECREMENT_VALUE(pid_table_current_index, 3, PID_TABLE_NUM_INDEXES);
+            DECREMENT_WRAP(pid_table_current_index, 3, PID_TABLE_NUM_INDEXES - 1);
         } else if(pid_table_current_index == (PID_TABLE_NUM_INDEXES - 2) && currentSticks == STICKS_YES){
             settingsRestore();
         } else if(pid_table_current_index == (PID_TABLE_NUM_INDEXES - 1) && currentSticks == STICKS_YES){
@@ -819,13 +822,13 @@ static void updatePids(){
             if(pid_table_current_index == 1 || pid_table_current_index == 4 || pid_table_current_index == 7){
                 INCREMENT_VALUE(*pidsValues[pid_table_current_index], 1, 100);
             } else {
-                INCREMENT_VALUE(*pidsValues[pid_table_current_index], 100, 10000);
+                INCREMENT_VALUE(*pidsValues[pid_table_current_index], 100, 32000);
             }
         } else if(currentSticks == STICKS_NO){
             if(pid_table_current_index == 1 || pid_table_current_index == 4 || pid_table_current_index == 7){
-                DECREMENT_VALUE(*pidsValues[pid_table_current_index], 1, 100);
+                DECREMENT_VALUE(*pidsValues[pid_table_current_index], 1);
             } else {
-                DECREMENT_VALUE(*pidsValues[pid_table_current_index], 100, 10000);
+                DECREMENT_VALUE(*pidsValues[pid_table_current_index], 100);
             }
         }
     }
@@ -875,7 +878,7 @@ static void updateRates(){
         if(currentSticks == STICKS_YES){
             INCREMENT_VALUE(*ratesValues[pid_table_current_index], 10, 1000);
         } else if(currentSticks == STICKS_NO){
-            DECREMENT_VALUE(*ratesValues[pid_table_current_index], 10, 1000);
+            DECREMENT_VALUE(*ratesValues[pid_table_current_index], 10);
         }
     }
 
@@ -1024,9 +1027,9 @@ static void updateTramp(){
 
     if(currentSticks && currentSticks < STICKS_ERR){
         if(currentSticks == STICKS_DOWN){
-            INCREMENT_VALUE(tramp_view_current_index, 1, TRAMP_VIEW_NUM_INDEXES);
+            INCREMENT_WRAP(tramp_view_current_index, 1, TRAMP_VIEW_NUM_INDEXES - 1);
         } else if(currentSticks == STICKS_UP){
-            DECREMENT_VALUE(tramp_view_current_index, 1, TRAMP_VIEW_NUM_INDEXES);
+            DECREMENT_WRAP(tramp_view_current_index, 1, TRAMP_VIEW_NUM_INDEXES - 1);
         } else if(tramp_view_current_index == (TRAMP_VIEW_NUM_INDEXES - 2) && currentSticks == STICKS_YES){
             //cancel
             setCurrentView(VIEW_MAIN);
@@ -1042,15 +1045,15 @@ static void updateTramp(){
                 tramp_temp_pit = !tramp_temp_pit;
             } else if(tramp_view_current_index == 1){
                 //freq
-                INCREMENT_VALUE(index, 1, CHANNEL_MAX_INDEX+1);
+                INCREMENT_WRAP(index, 1, CHANNEL_MAX_INDEX);
                 tramp_temp_freq = freqFromIndex(index);
             } else if(tramp_view_current_index == 2){
                 //band
-                INCREMENT_VALUE(band, 1, 6);
+                INCREMENT_WRAP(band, 1, 5);
                 tramp_temp_freq = freqFromBand(band, chanNum);
             } else if(tramp_view_current_index == 3){
                 //chan
-                INCREMENT_VALUE(chanNum, 1, 8);
+                INCREMENT_WRAP(chanNum, 1, 7);
                 tramp_temp_freq = freqFromBand(band, chanNum);
             } else if(tramp_view_current_index == 4){
                 //power
@@ -1064,15 +1067,15 @@ static void updateTramp(){
                 tramp_temp_pit = !tramp_temp_pit;
             } else if(tramp_view_current_index == 1){
                 //freq
-                DECREMENT_VALUE(index, 1, CHANNEL_MAX_INDEX+1);
+                DECREMENT_WRAP(index, 1, CHANNEL_MAX_INDEX);
                 tramp_temp_freq = freqFromIndex(index);
             } else if(tramp_view_current_index == 2){
                 //band
-                DECREMENT_VALUE(band, 1, 6);
+                DECREMENT_WRAP(band, 1, 5);
                 tramp_temp_freq = freqFromBand(band, chanNum);
             } else if(tramp_view_current_index == 3){
                 //chan
-                DECREMENT_VALUE(chanNum, 1, 8);
+                DECREMENT_WRAP(chanNum, 1, 7);
                 tramp_temp_freq = freqFromBand(band, chanNum);
             } else if(tramp_view_current_index == 4){
                 //power
