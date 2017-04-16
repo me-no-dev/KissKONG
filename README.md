@@ -22,9 +22,13 @@ Connect Tramp VTX Telemetry wire to the current sensing pin of MicroMinimOSD to 
 
 There are plans to use the built-in Tramp support in Kiss FC when one is not detected on the current pin
 
-![Menu](images/connections.jpg)
+![Connections](images/connections.jpg)
 
 ## Example Screens
+
+### Armed
+
+![Armed](images/armed.jpg)
 
 ### Main Menu
 
