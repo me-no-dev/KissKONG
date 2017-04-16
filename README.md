@@ -17,6 +17,13 @@ If setting is not detetcted, only live data and flight statistics will be shown.
 
 ### Menu can be entered ONLY when disarmed
 
+### Tramp VTX Support
+Connect Tramp VTX Telemetry wire to the current sensing pin of MicroMinimOSD to control your VTX through the OSD
+
+There are plans to use the built-in Tramp support in Kiss FC when one is not detected on the current pin
+
+![Menu](images/connections.jpg)
+
 ## Example Screens
 
 ### Main Menu
@@ -50,3 +57,7 @@ If setting is not detetcted, only live data and flight statistics will be shown.
 ### Flight Statitics
 
 ![Stats](images/stats.jpg)
+
+### Tramp VTX
+
+![Stats](images/tramp.jpg)
