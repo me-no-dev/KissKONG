@@ -1059,6 +1059,8 @@ static void updateTramp(){
                 //power
                 if(tramp_temp_power <= (tramp->max_power - 25)){
                     tramp_temp_power += 25;
+                } else {
+                    tramp_temp_power = tramp->max_power;
                 }
             }
         } else if(currentSticks == STICKS_NO){
@@ -1081,6 +1083,8 @@ static void updateTramp(){
                 //power
                 if(tramp_temp_power >= 25){
                     tramp_temp_power -= 25;
+                } else {
+                    tramp_temp_power = 0;
                 }
             }
         }
@@ -1234,8 +1238,14 @@ void drawLiveStats(){
     video_mode_t mode = osd.detectVideoMode();
     static video_mode_t lastMode = mode;
     uint8_t bottomRow = 11;
-    int16_t voltage = esc_stats.count?esc_stats.voltage:telemetry.voltage;
+    int16_t voltage = telemetry.voltage;
     uint8_t i;
+
+    if(esc_stats.count){
+        if(esc_stats.voltage > ((voltage * 8) / 10)){
+            voltage = esc_stats.voltage;
+        }
+    }
 
     if(mode == VIDEO_NONE){
         mode = lastMode;

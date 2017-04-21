@@ -95,7 +95,7 @@ void printMah(int32_t value, bool printName){
 }
 
 //0 -> 100 (4)
-void printPercentage(uint8_t data, bool printName){
+void printPercentage(uint16_t data, bool printName){
     if(data < 100){
         osd.write(SPACE);
         if(data < 10){
