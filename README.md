@@ -4,10 +4,18 @@ This is a written-from-scratch code to communicate with KISS FC and control MAX7
 
 #### Code is currently compatible with MinimOSD hardware and any ATmega328p with MAX7456 on default SPI pins
 
-Both ```KissAndMsp``` and ```MAX7456``` are stand-alone libs that can be used in other projects.
+```KissAndMsp```, ```Tramp``` and ```MAX7456``` are stand-alone libs that can be used in other projects.
 
 To be able to use the menu to change settings, ARM MUST be set to be controlled by a switch!
 If setting is not detetcted, only live data and flight statistics will be shown.
+
+### Installing
+- Download recent verion of Arduino IDE
+- First open ```FontUploadSketch.ino``` in Arduino IDE
+- Select board to be "Arduino Pro Mini 5V 16MHz"
+- Upload the sketch to MinimOSD to update the font
+- Next open ```KissKongOSD.ino``` in Arduino IDE and Upload it as above
+- Done
 
 ### Controls (Throttle always in center)
 * Enter Main Menu -> Yaw Right + Roll Left
