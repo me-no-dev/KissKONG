@@ -876,7 +876,7 @@ static void updateRates(){
 
     if(pid_table_current_index < 9){
         if(currentSticks == STICKS_YES){
-            INCREMENT_VALUE(*ratesValues[pid_table_current_index], 10, 1000);
+            INCREMENT_VALUE(*ratesValues[pid_table_current_index], 10, 10000);
         } else if(currentSticks == STICKS_NO){
             DECREMENT_VALUE(*ratesValues[pid_table_current_index], 10);
         }
